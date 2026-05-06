@@ -10,7 +10,7 @@
     电话(不推荐): 13518828772 */
 
 #include <stdio.h>
-    #define _RAT_USE_INT_
+//  #define _RAT_USE_INT_
 //  #define _RAT_USE_LONG_
 #ifdef _RAT_USE_INT_
     #define rint int
