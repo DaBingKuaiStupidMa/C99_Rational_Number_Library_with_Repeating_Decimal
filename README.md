@@ -13,8 +13,9 @@ You can decide which kind of int to use in "rat" by these operations:
 #define _RAT_USE_INT_
 #define _RAT_USE_LONG_
 ```
-And clearly the default precision is long long integer. 
-Here are some of the lib's most important functions:
+And clearly the default precision is long long integer if you don't do anything. 
+
+This library's actions are strictly designed to be mathematically correct, covering everything from zero‑denominator cases to value‑ or precision‑related overflow. All IO functions are entirely customized to make it a more effective lib, **_only using fwrite(), fgetc(), and ungetc()_**. Here are some of the lib's most important functions:
 ```
 rat RatSimp(rat); // 约分 (Simplify)
 rat RatPlus(rat,rat);
@@ -45,10 +46,8 @@ int main(){
 ```
 In case of you don't know:
 
-(0) Sorry the code comments in the files are in Chinese, which describes what each function and design is made for.
+(1) You could test your PC's performance by PutRepeat((rat){1,2147483647,1}); .
 
-(1) Use as you want as long as saving the code comment which shows the lib's author name at the beginning of .h.
+(2) Sorry the code comments in the files are in Chinese, which describes what each function and design is made for.
 
-(2) All IO functions are entirely customized to make it a more effective lib, only using fwrite(), fgetc(), and ungetc().
-
-(3) This library's actions are strictly designed to be mathematically correct, covering everything from zero‑denominator cases to value‑ or precision‑related overflow.
+(3) Use as you want as long as saving the code comment which shows the lib's author name at the beginning of .h.
