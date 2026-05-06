@@ -449,7 +449,6 @@ char fPutRat(rat q,FILE *fp){
 //  分数线前后。
     _R_OB_[i++]='/';
     _PUTU_PPI_(q.down,i,_R_OB_)
-    _output_:
     return fwrite(_R_OB_,1,i,fp);
 }
 
