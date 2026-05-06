@@ -49,6 +49,6 @@ In case of you don't know:
 
 (1) Use as you want as long as saving the code comment which shows the lib's author name at the beginning of .h.
 
-(2) All IO functions are self-created to make it a more effective lib.
+(2) All IO functions are entirely customized to make it a more effective lib, only using fwrite(), fgetc(), and ungetc().
 
 (3) This library's actions are strictly designed to be mathematically correct, covering everything from zero‑denominator cases to value‑ or precision‑related overflow.
