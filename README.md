@@ -29,7 +29,7 @@ rat GetRat(); // 综合输入（整数、分数、小数）
 // Global Input Function Supporting Int, Fraction, and Decimal Style at the same time, Repeating Decimal Included.
 
 rat LdbToRat(long double);  // long double 化为 rat
-// This function also works when there's precision related overflow.
+// This function also works when there's precision-related overflow.
 ```
 RatTest File is provided, and there's a micro example:
 ```
