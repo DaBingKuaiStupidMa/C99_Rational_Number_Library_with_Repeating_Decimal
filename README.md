@@ -1,0 +1,52 @@
+This lib uses C language to implement calculation, comparison, output, input of rational numbers (fractions and decimals), and the Transformation between native C data types and rational numbers, within limited precision, repeating decimal supported. Here's the so-called "rational class" itself:
+```
+typedef struct rat{
+    rint up; // Naming conflicts avoided
+    urint down: sizeof(urint)*8-1;
+    unsigned splfd: 1;
+}rat; // Rint defined by macro
+```
+You can decide which kind of int to use in "rat" by these operations:
+```
+#define _RAT_USE_INT_
+#define _RAT_USE_LONG_
+```
+And clearly the default precision is long long integer. 
+Here are some of the lib's most important functions:
+```
+rat RatSimp(rat); // 约分 (Simplify)
+rat RatPlus(rat,rat);
+rat RatTimes(rat,rat);
+signed char RatCmp(rat,rat); // 比较 (Comparison) ">"1, "=="0, "<"-1, "NaN"2.
+
+char PutRat(rat); // 分数输出 (Fraction Style)
+char PutDecimal(rat,short); // 按n位小数输出 (Decimal Style with Requested Precision)
+rint PutRepeat(rat); // 小数形式输出直到循环节结束 (Repeating Decimal)
+
+rat GetRat(); // 综合输入（整数、分数、小数）
+// Global Input Function Supporting Int, Fraction, and Decimal Style at the same time, Repeating Decimal Included.
+
+rat LdbToRat(long double);  // long double 化为 rat
+// This function also works when there's precision related overflow.
+```
+RatTest File is provided, and there's a micro example:
+```
+#include "rational.h"
+int main(){
+    rat a, b, c;
+    a=rONE; // a defined const
+    b=GetRat(); // You could enter "-.0(143857)" for instance.
+    c=RatPlus(a,b);
+    PutRat(c);
+    return 0;
+}
+```
+In case of you don't know:
+
+(0) Sorry the code comments in the files are in Chinese, which describes what each function and design is made for.
+
+(1) Use as you want as long as saving the code comment which shows the lib's author name at the beginning of .h.
+
+(2) All IO functions are self-created to make it a more effective lib.
+
+(3) This library's actions are strictly designed to be mathematically correct, covering everything from zero‑denominator cases to value‑ or precision‑related overflow.
