@@ -111,6 +111,5 @@ char fPutRat(rat,FILE *);
 char fPutDecimal(rat,short,FILE *);
 rint fPutRepeat(rat,FILE *);
 rat fGetRat(FILE *);
-//  #include "rational.c"
 //  end of rational.h
 #endif
