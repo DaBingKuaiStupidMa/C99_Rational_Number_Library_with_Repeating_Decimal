@@ -733,9 +733,9 @@ rat fGetRat(FILE *fp){
 
     if(temp=='/'){_after_slash_:
         temp=fgetc(fp);
-        _reget_:switch(temp){
-            case '+': temp=fgetc(fp); goto _reget_;
-            case '-': pozneg=-pozneg; temp=fgetc(fp); goto _reget_;
+        switch(temp){
+            case '-': pozneg=-pozneg;
+            case '+': temp=fgetc(fp);
         }if(_IS_DIGIT_(temp))
             q.down=0;
         _ADD_DIGIT_(q.down,temp){
