@@ -1,4 +1,4 @@
-中文用户可以方便地阅读代码注释，因为大冰块的母语是中文。This lib uses C language to implement calculation, comparison, output, input of rational numbers (fractions and decimals), and the Transformation between native C data types and rational numbers, within limited precision, repeating decimal supported. Here's the so-called "rational class" itself:
+中文用户可以方便地阅读代码注释，因为大冰块的母语是中文。This lib uses C language to implement calculation, comparison, output, input of rational numbers (fractions and decimals), and the transformation between native C data types and rational numbers, within limited precision, repeating decimal supported. Here's the so-called "rational class" :
 ```
 typedef struct rat{
     rint up; // Naming conflicts avoided
