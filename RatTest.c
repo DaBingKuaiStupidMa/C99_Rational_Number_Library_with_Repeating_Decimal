@@ -73,6 +73,6 @@ int main(){
                                 RatTimes((rat){j,i,0},(rat){l,k,0});
                             }break;
             default: goto end;
-        }   while(getchar()!='\n'); n;
+        }   n; fputs("输入流残余：",stdout); while(putchar(getchar())!='\n');
     }end:;
 }
