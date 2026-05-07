@@ -1,18 +1,19 @@
 #include "rational.h"
 //  #define _INTRO_TRS_
-/*  Introduce Typical Rational Strings: 本功能由上方的宏
-    定义开启，旨在为特定的字符串匹配输入结果。比如"+inf"这样的
-    输入，就会被解析为rINF，当然也可以用1/0表示。*/
+/*  Introduce Typical Rational Strings: 
+    本功能要求输入流支持连续多次ungetc()回退，由上方的宏定义开启，
+    旨在为特定的字符串匹配输入结果。比如"+inf"这样的输入，就会被
+    解析为rINF，当然也可以用1/0表示。*/
 
 const rat
 rZERO={0,1,1},    rONE={1,1,1}, rINF={1,0,1},
 rNEGINF={-1,0,1}, rUNCERTAIN={0,0,1};
 
 #ifdef _INTRO_TRS_
-/*  为了保证安全，指定的特殊字符串和配对的特殊数值以常量形式储存，
-    这使得注册新的TRS必须手动修改代码。
-*   个性化添加示范：
-    假定您要添加一个叫作"ratmin"的代号，匹配{RAT_MIN,1,1}，那
+/*  为了保证安全，指
+    定的特殊字符串和配对的特殊数值以常量形式储存，注册新的TRS必
+    须手动修改代码，以下是个性化添加示范：
+*   假定您要添加一个叫作"ratmin"的代号，匹配{RAT_MIN,1,1}，那
     么您需要将_NOTRS_的值改为4，将_RIB_SIZE_的值改为6，在TRS
     数组后添上 "ratmin"，在TRSL数组后添上6，在TLR数组后添上 {
     LR_MIN,1,1}，不需要修改其他任何地方。*/
@@ -22,10 +23,7 @@ const char *_T_RS_[_NOTRS_] = {"+inf","-inf","NaN"};        /* typical rat strin
 const char  _T_RSL_[_NOTRS_]= {4,4,3};                      /* typical rat string lengths */
 const lr    _T_LR_[_NOTRS_] = {{1,0,1},{-1,0,1},{0,0,1}};   /* typical longrats */
 /*  借助一个极小的 buffer，判断是否正在输入 TRS。若是，返回匹
-    配的有理值，若不是，将 buffer 中的所有字符 归还 到输入流。
-*   库的作者在自己的电脑上使用此功能没有任何问题。如果发现与un-
-    getc函数有关的bug，请不要_INTRO_TRS_。*/
-    /*判断是否输入了特殊字符串。*/
+    配的有理值，若不是，将 buffer 中的所有字符 归还 到输入流。*/
 lr _trs_judge_(FILE *fp){
     char _R_IB_[_RIB_SIZE_]={0}; /* rat input buffer */
     char _W_SF_[_NOTRS_]   ={0}; /* whether string fits (0->Yes 1->No) */
