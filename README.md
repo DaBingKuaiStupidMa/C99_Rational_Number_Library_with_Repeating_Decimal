@@ -12,7 +12,7 @@ you can decide which kind of int to use in "rat" by these operations:
 #define _RAT_USE_INT_
 #define _RAT_USE_LONG_
 ```
-This library is strictly designed to produce _mathematically fit_ results under _finite precision_. I/O functions only use `fwrite()`, `fgetc()` and `ungetc()` to work. The library supports a wide variety of input formats:
+This library is strictly designed to produce _mathematically fit_ results under _finite precision_. **_ATTENTION_, when a rational number's value runs out of the range from RAT_MIN to RAT_MAX, it becomes a boundary value like RAT_MAX/1 _INSTEAD OF_ 1/0 (+inf).** I/O functions only use `fwrite()`, `fgetc()` and `ungetc()` to work. The library supports a wide variety of input formats:
 - Integers: `42`, `-7`
 - Fractions: `2/3`, `-2/-3`, `/23`, `23/`
 - Decimals: `0.23`, `.23`, `-23.`
