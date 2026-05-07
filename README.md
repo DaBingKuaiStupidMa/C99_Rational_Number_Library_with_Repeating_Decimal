@@ -48,11 +48,7 @@ int main(){
 }
 ```
 In case of you don't know:
-
-(1) You could test your PC's performance by PutRepeat((rat){1,2147483647,1}); .
-
-(2) Sorry the code comments in the files are in Chinese, which describes what each function and design is made for.
-
-(3) Use as you want as long as saving the code comment which shows the lib's author name at the beginning of .h.
-
-(4) English Version of .txt with TRANSLATED code comments would be ready in the future.
+- You could test your PC's performance by PutRepeat((rat){1,2147483647,1}); .
+- Sorry the code comments in the files are in Chinese, which describes what each function and design is made for.
+- Use as you want as long as saving the code comment which shows the lib's author name at the beginning of .h.
+- English Version of .txt with TRANSLATED code comments would be ready in the future.
