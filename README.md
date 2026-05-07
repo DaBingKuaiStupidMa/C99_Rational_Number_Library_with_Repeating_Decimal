@@ -6,14 +6,19 @@ typedef struct rat{
     unsigned splfd: 1;
 }rat; // Rint defined by macro
 ```
-You can decide which kind of int to use in "rat" by these operations:
+The default precision is long long integer if you don't do anything, but
+you can decide which kind of int to use in "rat" by these operations:
 ```
 #define _RAT_USE_INT_
 #define _RAT_USE_LONG_
 ```
-And clearly the default precision is long long integer if you don't do anything. 
+This library is strictly designed to produce _mathematically fit_ results under _finite precision_. I/O functions only use `fwrite()`, `fgetc()` and `ungetc()` to work. The library supports a wide variety of input formats:
+- Integers: `42`, `-7`
+- Fractions: `2/3`, `-2/-3`, `/23`, `23/`
+- Decimals: `0.23`, `.23`, `-23.`
+- Repeating decimals: `1.2(3)`, `-.(142857)`
 
-This library's actions are strictly designed to be mathematically correct, covering everything from zero‑denominator cases to value‑ or precision‑related overflow. All IO functions are entirely customized to make it a more effective lib, **_only using fwrite(), fgetc(), and ungetc()_**. Here are some of the lib's most important functions:
+Omissions around `.` are treated as `0`, while other ones around `/` are treated as `1`, and the `(3)` in `0.2(3)` denotes the repeating period. Here are some of the library's most important functions:
 ```
 rat RatSimp(rat); // 约分 (Simplify)
 rat RatPlus(rat,rat);
