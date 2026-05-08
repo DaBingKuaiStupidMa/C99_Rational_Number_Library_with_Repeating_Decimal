@@ -1,11 +1,8 @@
 #ifndef _RATIONAL_H_BY_DBK_
 #define _RATIONAL_H_BY_DBK_
-#define _DBK_RATIONAL_VERSION_ 20260505L
-/*  这个有理库在 *有限精度* 下实现分数运算、输入、输出和转化等功能，
-    支持 0 分母，支持循环小数输入输出。溢出分为两类，一是精度溢出，
-    这时算法会返回一个分子分母都在精度范围内的近似值，二是数值超出了
-    能够表示的最大范围，这个版本的库只认为应该返回边界值如 RAT_MAX，
-    而不是无穷值如 1/0 即 +inf。函数的行为见rational.c。
+#define _DBK_RATIONAL_VERSION_ 20260508L
+/*  这个有理库在 *有限精度* 下实现有理数运算、输入、输出和转化等功
+    能，支持 0 分母，支持循环小数输入输出。函数的行为见rational.c。
 
 *   本库来自 @大冰块stupid吗，联系方式有
     腾讯QQ(推荐): 3287178592
@@ -14,10 +11,11 @@
 #include <stdio.h>
 //  #define _RAT_USE_INT_
 //  #define _RAT_USE_LONG_
+
 #ifdef _RAT_USE_INT_
     #define rint int
     #define urint unsigned int
-#elif defined(_RAT_USE_LONG_)
+#elif defined _RAT_USE_LONG_
     #define rint long
     #define urint unsigned long
 #else // Default Precision
@@ -44,21 +42,31 @@ typedef struct rat{
 
 *   每一个成员变量的设计都有缘由。正负性完全由分子决定，分母总是正的，
     化简标记仅 1 位，这让分子分母范围能够一致。
-    
+
 *   库的实现中，涉及运算的整型全都写成(u)rint，衍生常量都按照以下基
-    本常量来定义。也就是说，光是rint和urint，加上以下常数宏的定义，
-    就能够决定rat的分子分母是多少精度的整数。*/
+    本常量来定义。也就是说，光是解除 #define _RAT_USE_..._的注释，
+    就可以更改整个库的精度范围。*/
+
 #include <limits.h>
 #ifdef _RAT_USE_INT_
     #define RAT_MAX INT_MAX
     #define RAT_MIN INT_MIN
-#elif defined(_RAT_USE_LONG_)
+#elif defined _RAT_USE_LONG_
     #define RAT_MAX LONG_MAX
     #define RAT_MIN LONG_MIN
 #else // Default Precision
     #define RAT_MAX LLONG_MAX
     #define RAT_MIN LLONG_MIN
 #endif
+
+#define _RAT_OVERFLOW_TO_NAN_
+/*  溢出分为两类，一是精度溢出，这时算法会返回一个分子分母都在精度范
+    围内的近似值，二是数值超出了能够表示的最大范围，这个版本的库默认
+    认为须返回强报错 NaN (0/0)，而不是边界值如 RAT_MAX，也不是无
+    穷值如 +inf (1/0)。这个规则在 *运算与输入* 一致。
+*   如果需要保证运算或输入从不返回错误，将_RAT_OVERFLOW_NO_FAULT_
+    的宏定义移除移，即可令数值溢出返回 RAT_MAX 或 RAT_MIN。*/
+
 #if RAT_MAX==9223372036854775807LL /*Default Precision*/
     #define _D_L_O_R_ 19 /*_DECIMAL_LENGTH_OF_RAT_MAX_*/
     #define _SQRTRM_ 3037000499LL /*_SQRT_OF_RAT_MAX_*/
@@ -74,6 +82,7 @@ typedef struct rat{
     {0,1,1}, {1,1,1}, {1,0,1}, {-1,0,1}, {0,0,1}.
     推荐用rZERO初始化有理值。另外，一切零分母分数统称无值分数。*/
 extern const rat rZERO, rONE, rINF, rNEGINF, rUNCERTAIN;
+extern const rat rMAX, rMIN;
 
 /*  这是一些特制常量，用于承载错误信息。除了人为初始化，它们仅有可能
     通过本库的输入函数获得。这些量被 splfd 保护，意味着错误信息要通
