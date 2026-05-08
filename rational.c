@@ -1,16 +1,16 @@
 #include "rational.h"
-//  #define _INTRO_TRS_
+
+const rat
+rZERO={0,1,1}, rONE={1,1,1}, rINF={1,0,1}, rNEGINF={-1,0,1},
+rUNCERTAIN={0,0,1}, rMAX={RAT_MAX, 1,1}, rMIN={RAT_MIN, 1,1};
+
+// #define _INTRO_TRS_
+#ifdef _INTRO_TRS_
 /*  Introduce Typical Rational Strings: 
     本功能要求输入流支持连续多次ungetc()回退，由上方的宏定义开启，
     旨在为特定的字符串匹配输入结果。比如"+inf"这样的输入，就会被
-    解析为rINF，当然也可以用1/0表示。*/
-
-const rat
-rZERO={0,1,1},    rONE={1,1,1}, rINF={1,0,1},
-rNEGINF={-1,0,1}, rUNCERTAIN={0,0,1};
-
-#ifdef _INTRO_TRS_
-/*  为了保证安全，指定的特殊字符串和配对的特殊数值以常量形式储存，
+    解析为rINF，当然也可以用1/0表示。
+*   为了保证安全，指定的特殊字符串和配对的特殊数值以常量形式储存，
     注册新的TRS须手动修改代码，以下是一个注册示例：
 *   假定您要添加一个叫作"ratmin"的代号，匹配{RAT_MIN,1,1}，那
     么您需要将_NOTRS_的值改为4，将_RIB_SIZE_的值改为6，在TRS
@@ -20,10 +20,13 @@ rNEGINF={-1,0,1}, rUNCERTAIN={0,0,1};
 #define _RIB_SIZE_ 4    // Rat input buffer's size SHOULDE be the max length of TRS.
 const char *_T_RS_[_NOTRS_] = {"+inf","-inf","NaN"};        /* typical rat strings */
 const char  _T_RSL_[_NOTRS_]= {4,4,3};                      /* typical rat string lengths */
-const lr    _T_LR_[_NOTRS_] = {{1,0,1},{-1,0,1},{0,0,1}};   /* typical longrats */
+const rat    _T_RAT_[_NOTRS_] = {{1,0,1},{-1,0,1},{0,0,1}}; /* typical rats */
 /*  借助一个极小的 buffer，判断是否正在输入 TRS。若是，返回匹
-    配的有理值，若不是，将 buffer 中的所有字符 归还 到输入流。*/
-lr _trs_judge_(FILE *fp){
+    配的有理值，若不是，将 buffer 中的所有字符 归还 到输入流。
+*   库的作者在自己的电脑上使用此功能没有任何问题。如果发现与un-
+    getc函数有关的bug，请不要_INTRO_TRS_。*/
+    /*判断是否输入了特殊字符串。*/
+rat _trs_judge_(FILE *fp){
     char _R_IB_[_RIB_SIZE_]={0}; /* rat input buffer */
     char _W_SF_[_NOTRS_]   ={0}; /* whether string fits (0->Yes 1->No) */
     char n=0,i;
@@ -33,7 +36,7 @@ lr _trs_judge_(FILE *fp){
             if(_R_IB_[n]!=_T_RS_[i][n]) // 任一位字符不相同，做标记。
                 _W_SF_[i]=1;
             if(!_W_SF_[i] && n+1==_T_RSL_[i]) // 没被标记过且达到长度，返回相应值。
-                return _T_LR_[i];
+                return _T_RAT_[i];
         }
         for(i=0;i<_NOTRS_;++i) // 检查_whether_string_fits_.
             if(!_W_SF_[i]) break;
@@ -86,12 +89,18 @@ static char _MUL_FAIL4_(rint prod, rint fac1, rint fac2){
     #pragma optimize("", on)
 #endif
 
+#ifdef _RAT_OVERFLOW_TO_NAN_
+    #define _RETURN_OVERFLOW_(val) {return rUNCERTAIN;}
+#else
+    #define _RETURN_OVERFLOW_(val) {return val>=0? rMAX:rMIN;}
+#endif
+
 //  这个经典的算法完全由 袁同学 介绍，在此感谢！
 //  参数的精度是根据有效数字（相对误差）划定的。
     /* long double 化为 rat */
 rat LdbToRat(ldb r){
     if(r>RAT_MAX-1 || r<RAT_MIN+1)
-        return (rat){r>=0? RAT_MAX:RAT_MIN,1,1};
+        _RETURN_OVERFLOW_(r)
     if(_BETW_RTDT_(r))
         return rZERO;
     char minus=(r<0);
@@ -203,7 +212,7 @@ rat RatPlus(rat x,rat y){
         x.up/(ldb)x.down+
         y.up/(ldb)y.down;
     if(value>RAT_MAX-1 || value<RAT_MIN+1)
-        return (rat){value>=0? RAT_MAX:RAT_MIN,1,1};
+        _RETURN_OVERFLOW_(value)
     if(_BETW_RTDT_(value))
         return rZERO;
     char safe=_IS_SAFE_(x,y);
@@ -259,7 +268,7 @@ rat RatTimes(rat x,rat y){
         (x.up/(ldb)x.down)*
         (y.up/(ldb)y.down);
     if(value>RAT_MAX-1 || value<RAT_MIN+1)
-        return (rat){value>=0? RAT_MAX:RAT_MIN,1,1};
+        _RETURN_OVERFLOW_(value)
     if(_BETW_RTDT_(value))
         return rZERO;
 //  单独处理整数乘法。
@@ -592,22 +601,27 @@ const rat _getrat_null_char_={4,0,1};
 }
     /*输入小数部分时分母是10的幂，分母即将溢出时，把分子四舍五
     入并冻结temp。应当指出宏遇到(而退出时，一定没有发生溢出。*/
-#define _POINT_ADD_DIGIT_(up,down,temp){\
+#define _POINT_ADD_DIGIT_(up,down,base,count,temp){\
+    count=0;\
     while(_IS_DIGIT_(temp)){\
-        if(down>_R_A_T_O_){\
+        if(count==_D_L_O_R_-1){\
             if(temp>='5')\
                 ++up;\
             break;\
         }\
         up=up*10+(temp-'0');\
-        down*=10;\
+        ++count;\
         temp=fgetc(fp);\
+    }base=10; /*快速幂*/\
+    while(count){\
+        if(count&1) down*=base;\
+        base*=base; count>>=1;\
     }\
 }
     /*有的分数输入，分子分母奇大，但是数量级接近，所以理应有一
     个近似值，这时有必要统计分子分母相差多少（十进制）位。这里
     的宏作用在于统计（准）分子溢出RAT_MAX多少位。*/
-#define _OVERFLOW_STATS_(count) while(_IS_DIGIT_(temp)) ++count,temp=fgetc(fp);
+#define _OVERFLOW_STATS_(count,temp) while(_IS_DIGIT_(temp)) ++count,temp=fgetc(fp);
     /*整数部分已经溢出，则不解析小数部分，注意循环节也被跳过，
     但是如果输入形如LARGE.123(alpha，则(会被归还到输入流。*/
 #define _SKIP_DECIMAL_PART_ {\
@@ -638,9 +652,8 @@ const rat _getrat_null_char_={4,0,1};
     不然就不读取，返回{2,0,1}。
 
 *   输入失败的情形：
-    一切输入失败都是因为 没有 遇到任何 数字 引起的，包括直接遇
-    到无关字符，直接遇到'\0'，直接遇到EOF。输入失败就返回特制的
-    信息分数。
+    一切输入失败都是因为 *没有* 遇到任何数字。包括直接遇到无关字
+    符，直接遇到'\0'，直接遇到EOF。输入失败就返回特制的信息分数：
     const rat _getrat_irrelated_; // {2,0,1}
     const rat _getrat_met_eof_; // {3,0,1}
     const rat _getrat_null_char_; // {4,0,1}
@@ -649,16 +662,16 @@ const rat _getrat_null_char_={4,0,1};
     解析了一些数字后，fGetRat可以因为空白字符自然结束，可能因为
     无关字符强行结束，或者遇到EOF而意外结束。无论以何种方式结束，
     fGetRat都 *不会* 吸收数字后继的任何字符（循环节的右括号当然
-    是数字的一部分，把它除外）。输入函数意外终止时立即休克，直接
-    返回休克时已经解析的数值。
+    是数字的一部分，把它除外）。输入结束时fGetRat直接已经解析的
+    数值，并且认为紧邻EOF的数字串是合理的的。
         eg1: -2/-3会被解析为2/3。
         eg2: 2.3()和2.3(./a)的括号不会被侵吞。
+        eg3: 0.33333333333333333333333333 *不* 解析为1/3。
 
 *   设计上，fGetRat不借助buffer，直接逐字符解析。这种设计意味着
     它节省了空间，但是反复调用fgetc也带来了时间与性能开销，解析
     流程也错综复杂。此外，若输入流不允许归还字符，那么fGetRat将
-    吞噬数字后至少 1 个无关字符。除了严重的屎山嫌疑，这种无法回头
-    的设计至少一个问题：分数形式输入中，无法准确接收 RAT_MIN/n。
+    吞噬数字后至少 1 个无关字符。
 
 *   没有开启特殊字符串输入匹配的时候，fGetRat并不支持诸如"+inf"
     "-inf""NaN"等形式的输入。然而，无论在何种模式，您都能以分数
@@ -683,7 +696,7 @@ rat fGetRat(FILE *fp){
 #endif
 
 //  either positive or negative. 
-    char pozneg=1; int count=0;
+    signed char pozneg=1; int count=0;
 //  常规输入开头预处理或分流。
     switch(temp){
         case '-': pozneg=-pozneg;
@@ -711,14 +724,17 @@ rat fGetRat(FILE *fp){
 
 //  解析第一段数码。
 
+    char HolyFuck=0;
     _ADD_DIGIT_(q.up,temp)
+    HolyFuck= (temp==_E_D_O_R_+1);
     if(_IS_DIGIT_(temp)){
-        _OVERFLOW_STATS_(count)
+        _OVERFLOW_STATS_(count,temp)
         if(temp=='.'){
             _SKIP_DECIMAL_PART_
         }if(temp!='/'){
+            if(HolyFuck && pozneg<0) return rMIN;
             ungetc(temp,fp);
-            return (q.up=pozneg>0 ? RAT_MAX:RAT_MIN), q;
+            _RETURN_OVERFLOW_(pozneg)
         }
     }if(temp!='/'&&temp!='.'){
         ungetc(temp,fp);
@@ -743,10 +759,12 @@ rat fGetRat(FILE *fp){
             }ungetc(temp,fp);
             if(count){ // 分子分母溢出程度不同。
                 if(count>=_D_L_O_R_)
-                    return (rat){pozneg>0 ? RAT_MAX:RAT_MIN,1,1};
+                    _RETURN_OVERFLOW_(pozneg)
                 if(count<=-_D_L_O_R_)
                     return rZERO;
-                else{ // 快速幂。
+                if(HolyFuck && pozneg<0 && count==1){
+                    q.up=RAT_MIN; return q;
+                }else{ // 快速幂。
                     ldb power=1,base;
                     if(count<0) count=-count,base=0.1L;
                     else base=10;
@@ -764,11 +782,10 @@ rat fGetRat(FILE *fp){
 //  解析'.'后第二段数码。
 
     else{ _after_point_:;
-        rat qq=rZERO;
-        urint down=1;
+        rat qq=rZERO; char ovfl;
+        urint base; // 用于快速幂
         temp=fgetc(fp);
-        _POINT_ADD_DIGIT_(qq.up,down,temp)
-        qq.down=down;
+        _POINT_ADD_DIGIT_(qq.up,qq.down,base,count,temp)
         qq.splfd=0;
         q=RatPlus(q,qq);
         // 发生溢出，丢弃余下小数部分。
@@ -782,9 +799,9 @@ rat fGetRat(FILE *fp){
             if(pozneg<0) q.up=-q.up;
             return q;
         }// 以下是循环节模块。
-        qq=(rat){0,down,0};
-        temp=fgetc(fp);
-        _POINT_ADD_DIGIT_(qq.up,qq.down,temp)
+        urint down=qq.down;
+        qq.up=0; temp=fgetc(fp);
+        _POINT_ADD_DIGIT_(qq.up,qq.down,base,count,temp)
         // 防止括号间无内容。
         if(qq.down!=down){
             if(_IS_DIGIT_(temp)){
@@ -814,6 +831,7 @@ rat GetRat() {return fGetRat(stdin);}
 #undef ldb
 #undef _BETW_RTDT_
 #undef _BETW_RTEP_
+#undef _RETURN_OVERFLOW_
 #undef _BETW_SQRTRM_
 #undef _IS_SAFE_
 #undef _PUTU_PPI_
