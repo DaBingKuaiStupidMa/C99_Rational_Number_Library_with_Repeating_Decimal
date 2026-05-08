@@ -4,7 +4,6 @@
 #include "rational.h"
 #define g GetRat()
 #define n putchar('\n')
-//  这程序测试rational中各个功能。
 int main(){
     rat a,b,c; int opt; long double f;
     while(opt=0, 1){
