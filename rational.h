@@ -1,12 +1,13 @@
 #ifndef _RATIONAL_H_BY_DBK_
 #define _RATIONAL_H_BY_DBK_
-#define _DBK_RATIONAL_VERSION_ 20260508L
+#define _DBK_RATIONAL_VERSION_ 202605010L
 /*  这个有理库在 *有限精度* 下实现有理数运算、输入、输出和转化等功
     能，支持 0 分母，支持循环小数输入输出。函数的行为见rational.c。
 
 *   本库来自 @大冰块stupid吗，联系方式有
     腾讯QQ(推荐): 3287178592
-    电话(不推荐): 13518828772 */
+    电话(不推荐): 13518828772
+    dabingkuaistupidma@gmail.com*/
 
 #include <stdio.h>
 //  #define _RAT_USE_INT_
@@ -70,13 +71,16 @@ typedef struct rat{
 #if RAT_MAX==9223372036854775807LL /*Default Precision*/
     #define _D_L_O_R_ 19 /*_DECIMAL_LENGTH_OF_RAT_MAX_*/
     #define _SQRTRM_ 3037000499LL /*_SQRT_OF_RAT_MAX_*/
+    #define RAT_SIZE 16
 #elif RAT_MAX==2147483647L
     #define _D_L_O_R_ 10
     #define _SQRTRM_ 46340L
+    #define RAT_SIZE 8
 #elif RAT_MAX==32767 /*This is RARE.*/
     #define _D_L_O_R_ 5
     #define _SQRTRM_ 181
-#endif
+    #define RAT_SIZE 4
+#endif // RAT_SIZE defined as the POSSIBLE SMALLEST case
 
 /*  常量：0、1、分数式的正无穷、负无穷、不定态等。它们的值为：
     {0,1,1}, {1,1,1}, {1,0,1}, {-1,0,1}, {0,0,1}.
@@ -106,11 +110,11 @@ signed char RatCmp(rat,rat);// 比较大小 ">"1, "=="0, "<"-1, "NaN"2.
 
 #define _DOB_SIZE_ 512 // Decimal output buffer's size
 
-char PutRat(rat);           // 分数输出
-char PutDecimal(rat,short); // 按n位小数输出（禁四舍五入）
-rint PutRepeat(rat);        // 小数形式输出直到循环节结束
+char PutRat(rat);                       // 分数输出
+unsigned short PutDecimal(rat,short);   // 按n位小数输出（禁四舍五入）
+rint PutRepeat(rat);                    // 小数形式输出直到循环节结束
+rat GetRat();                           // 综合输入（整数、分数、小数）
 
-rat GetRat();               // 综合输入（整数、分数、小数）
 long double RatToLdb(rat);  // rat 化为 long double
 double RatToDb(rat);        // rat 化为 double
 rat LdbToRat(long double);  // long double 化为 rat
@@ -119,8 +123,29 @@ rint RatToRint(rat);        // 化为整数
 //  File IO Func
 
 char fPutRat(rat,FILE *);
-char fPutDecimal(rat,short,FILE *);
+unsigned short fPutDecimal(rat,short,FILE *);
 rint fPutRepeat(rat,FILE *);
 rat fGetRat(FILE *);
+
+//  String IO Func
+
+/*  String GetRat
+    Recommended Method:
+    char *temp=str;
+    rat result=sGetRat( & temp,size);
+    int consumed=(int)(temp-str);
+    char NEVER_DO_THIS =*temp;*/
+rat sGetRat(char **AddrOfPtr,unsigned short size);
+char sPutRat(rat q,char *str,unsigned short size);
+unsigned short sPutDecimal(rat q,short n,char *str,unsigned short size);
+// undefined sPutRepeat(rat NaN,char *NULL,unsigned short SlZE);
+
+/*  Binarily Serialize a rat and return 1;
+    The size MUST be the same as RAT_SIZE, if not, return 0;*/
+char RatToBin(rat q,unsigned char *s,char size);
+/*  Do the opposite. The size MUST be the same as RAT_SIZE,
+    if not, return rUNCERTAIN;*/
+rat BinToRat(unsigned char *s,char size);
+
 //  end of rational.h
 #endif
