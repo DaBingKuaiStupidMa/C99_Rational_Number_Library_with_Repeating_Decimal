@@ -43,7 +43,7 @@ RatTest File is provided, and there's a micro example:
 #include "rational.h"
 int main(){
     rat a=rZERO; // rZERO is one of the defined constant value.
-    rat b={2,3} // b.splfd assigned as 0 autoly, recommend usage.
+    rat b={2,3}; // b.splfd assigned as 0 autoly, recommend usage.
     a=GetRat(); // You could enter "-.0(143857)" for instance.
     rat c=RatPlus(a,b);
     PutRat(c);
