@@ -3,16 +3,15 @@
 typedef struct rat{
     rint up; // Naming conflicts avoided
     urint down: sizeof(urint)*8-1;
-    unsigned splfd: 1;
+    unsigned splfd: 1; // Whether simplified
 }rat; // Rint defined by macro
 ```
-The default precision is long long integer if you don't do anything, but
-you can decide which kind of int to use in "rat" by these operations:
+The lib manages the member "splfd" automatically. The default precision is long long integer if you don't do anything, but you can decide which kind of int to use in "rat" by these operations:
 ```
 #define _RAT_USE_INT_
 #define _RAT_USE_LONG_
 ```
-This library is strictly designed to produce _mathematically fit_ results under _finite precision_. **_ATTENTION_, when a rational number's value runs out of the range from RAT_MIN to RAT_MAX, it becomes NaN instead of 1/0 or -1/0 (+inf or -inf), both in CALCULATION and INPUT.** But if you want it to return a finite saturated value like RAT_MAX to keep calculations running without NaN, cancel the macro definition below in rational.h:
+This lib is strictly designed to produce _mathematically fit_ results under _finite precision_. **_ATTENTION_, when a rational number's value runs out of the range from RAT_MIN to RAT_MAX, it becomes NaN instead of 1/0 or -1/0 (+inf or -inf), both in CALCULATION and INPUT.** But if you want it to return a finite saturated value like RAT_MAX to keep calculations running without NaN, cancel the macro definition below in rational.h:
 ```
 #define _RAT_OVERFLOW_TO_NAN_
 ```
@@ -43,10 +42,10 @@ RatTest File is provided, and there's a micro example:
 ```
 #include "rational.h"
 int main(){
-    rat a, b, c;
-    a=rONE; // a defined const
-    b=GetRat(); // You could enter "-.0(143857)" for instance.
-    c=RatPlus(a,b);
+    rat a=rZERO; // rZERO is one of the defined constant value.
+    rat b={2,3} // b.splfd assigned as 0 autoly, recommend usage.
+    a=GetRat(); // You could enter "-.0(143857)" for instance.
+    rat c=RatPlus(a,b);
     PutRat(c);
     return 0;
 }
