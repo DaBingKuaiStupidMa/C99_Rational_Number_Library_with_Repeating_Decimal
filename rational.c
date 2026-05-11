@@ -420,7 +420,7 @@ rint RatToRint(rat q){
 
 //  这条宏 不 检查fputs是否返回了EOF，使得输出函数的返回值变得\
     并不准确。最好用ftell获知偏移量变化值。
-#define _PUT_CHECK_1_(q){\
+#define _PUT_CHECK_(q){\
     if(!q.down){\
         switch(q.up){\
             case -1: fputs("-inf",fp); return 4;\
@@ -441,7 +441,7 @@ rint RatToRint(rat q){
 char fPutRat(rat q,FILE *fp){
     if(q.splfd!=1) q=RatSimp(q);
 //  拦截无值分数。
-    _PUT_CHECK_1_(q)
+    _PUT_CHECK_(q)
     char _R_OB_[2*_D_L_O_R_+2]={0}; // rat output buffer
     char i=0;
     urint q_up;
@@ -464,14 +464,14 @@ char PutRat(rat q) {return fPutRat(q,stdout);}
 const rint _R_A_T_O_=RAT_MAX/10;// _RAT_ABOUT_TO_OVERFLOW_
 const char _E_D_O_R_=RAT_MAX%10+'0';// _END_DIGIT_OF_RAT_MAX_
 
-//  按n位小数输出rat到FILE，返回非小数部分（含.）字符数。
+//  按n位小数输出rat到FILE，返回成功输出的字符总数。
 //  禁四舍五入，高于 32767 位的小数部分属于 *未定义行为*。
     /*File PutDecimal*/
-char fPutDecimal(rat q,short n,FILE *fp){
+unsigned short fPutDecimal(rat q,short n,FILE *fp){
     if(q.splfd!=1) q=RatSimp(q);
-    _PUT_CHECK_1_(q)
+    _PUT_CHECK_(q)
     char _D_OB_[_DOB_SIZE_]={0};
-    int i=0; char res=0;
+    unsigned int i=0; char res=0;
     rint temp; urint q_up;
     if(q.up<0){
         _D_OB_[i++]='-';
@@ -502,24 +502,14 @@ char fPutDecimal(rat q,short n,FILE *fp){
         _D_OB_[i++]=q_up/q.down+'0';
         if(i==_DOB_SIZE_){
             fwrite(_D_OB_,1,i,fp);
-            i=0;
+            i=0; res+=_DOB_SIZE_;
         }q_up%=q.down;
-    }fwrite(_D_OB_,1,i,fp);
+    }res+=fwrite(_D_OB_,1,i,fp);
     return res;
 }
 
     /*按n位小数输出（禁四舍五入）*/
-char PutDecimal(rat q,short n) {return fPutDecimal(q,n,stdout);}
-
-#define _PUT_CHECK_2_(q){\
-    if(!q.down){\
-        switch(q.up){\
-            case -1: fputs("-inf",fp); return 0;\
-            case 1: fputs("+inf",fp); return 0;\
-            default: fputs("NaN",fp); return 0;\
-        }\
-    }\
-}//int lv=2;与--lv呼应。
+unsigned short PutDecimal(rat q,short n) {return fPutDecimal(q,n,stdout);}
 
 //  准确地以小数形式输出。返回 *已输出* 的循环节长度。
 //  如果分母过大等原因导致循环节不能正确输出，返回-1。
@@ -530,8 +520,13 @@ rint fPutRepeat(rat q,FILE *fp){
     if(q.down>_R_A_T_O_){
         fPutDecimal(q,20,fp);
         return -1;
-    }_PUT_CHECK_2_(q)
-    char _D_OB_[_DOB_SIZE_]={0};
+    }if(!q.down){
+        switch(q.up){
+            case -1: fputs("-inf",fp); return 0;
+            case 1: fputs("+inf",fp); return 0;
+            default: fputs("NaN",fp); return 0;
+        }
+    }char _D_OB_[_DOB_SIZE_]={0};
     int i=0;
     rint temp; urint q_up;
     if(q.up<0){
@@ -641,7 +636,8 @@ const rat _getrat_null_char_={4,0,1};
     else ungetc(temp,fp);\
 }
 
-/*  这个输入函数同时支持 整数、分数、小数 三种形式的有理数输入，
+/*  File GetRat
+    这个输入函数同时支持 整数、分数、小数 三种形式的有理数输入，
     输入小数时，您还可以用 *英文* 括号来标记循环节。当小数点前
     后发生缺失时，认为省略了 0，当分数线前后出现缺失时，认为省
     略了 1。
@@ -678,7 +674,6 @@ const rat _getrat_null_char_={4,0,1};
     形式"1/0""-1/0"和"0/0"代表它们。
 
 *   fGetRat(fp)不支持反斜线和全角数字。*/
-    /* file GetRat */
 rat fGetRat(FILE *fp){
 //  丢弃开头的空白字符，包括换行。
     rat q=rZERO;
@@ -695,7 +690,7 @@ rat fGetRat(FILE *fp){
     temp=fgetc(fp);
 #endif
 
-//  either positive or negative. 
+//  either positive or negative.
     signed char pozneg=1; int count=0;
 //  常规输入开头预处理或分流。
     switch(temp){
@@ -782,7 +777,7 @@ rat fGetRat(FILE *fp){
 //  解析'.'后第二段数码。
 
     else{ _after_point_:;
-        rat qq=rZERO; char ovfl;
+        rat qq=rZERO;
         urint base; // 用于快速幂
         temp=fgetc(fp);
         _POINT_ADD_DIGIT_(qq.up,qq.down,base,count,temp)
@@ -826,21 +821,383 @@ rat fGetRat(FILE *fp){
     /*rat 综合输入（整数、分数、小数）*/
 rat GetRat() {return fGetRat(stdin);}
 
+#ifdef _INTRO_TRS_
+rat _s_trs_judge_(char **p){
+    char _R_IB_[_RIB_SIZE_]={0}; /* rat input buffer */
+    char _W_SF_[_NOTRS_]   ={0}; /* whether string fits (0->Yes 1->No) */
+    char n=0,i;
+    while(n<_RIB_SIZE_){
+        _R_IB_[n]=*((*p)++);
+        for(i=0;i<_NOTRS_;++i){ // 遍历_typical_rat_strings_.
+            if(_R_IB_[n]!=_T_RS_[i][n]) // 任一位字符不相同，做标记。
+                _W_SF_[i]=1;
+            if(!_W_SF_[i] && n+1==_T_RSL_[i]) // 没被标记过且达到长度，返回相应值。
+                return _T_RAT_[i];
+        }
+        for(i=0;i<_NOTRS_;++i) // 检查_whether_string_fits_.
+            if(!_W_SF_[i]) break;
+        if(i==_NOTRS_)
+            {++n;break;}
+        else ++n;
+    }
+    (*p)-=n;
+    return rZERO;
+}
+#endif
+
+#undef _ADD_DIGIT_
+#undef _POINT_ADD_DIGIT_
+#undef _OVERFLOW_STATS_
+#undef _SKIP_DECIMAL_PART_
+//  New MACROs
+#define _DANGEROUS_GETC_(temp,sp){\
+    if(sp>=X) temp=EOF,++sp;\
+    else temp=*sp++;\
+}
+#define _PRECISE_RETURN_{\
+    *AddrOfPtr=--sp;\
+    if(pozneg<0) q.up=-q.up;\
+    return q;\
+}
+//  Redefining MACROs
+#define _ADD_DIGIT_(n,temp){\
+    while(_IS_DIGIT_(temp)){\
+        if(n>=_R_A_T_O_ && (n>_R_A_T_O_ || temp>_E_D_O_R_))\
+            break;\
+        n=n*10+(temp-'0');\
+        _DANGEROUS_GETC_(temp,sp)\
+    }\
+}
+#define _POINT_ADD_DIGIT_(up,down,base,count,temp){\
+    count=0;\
+    while(_IS_DIGIT_(temp)){\
+        if(count==_D_L_O_R_-1){\
+            if(temp>='5')\
+                ++up;\
+            break;\
+        }\
+        up=up*10+(temp-'0');\
+        ++count;\
+        _DANGEROUS_GETC_(temp,sp)\
+    }base=10; /*快速幂*/\
+    while(count){\
+        if(count&1) down*=base;\
+        base*=base; count>>=1;\
+    }\
+}
+#define _OVERFLOW_STATS_(count,temp){\
+    while(_IS_DIGIT_(temp)){\
+        ++count;\
+        _DANGEROUS_GETC_(temp,sp)\
+    }\
+}
+#define _SKIP_DECIMAL_PART_ {\
+    do _DANGEROUS_GETC_(temp,sp)\
+    while(_IS_DIGIT_(temp));\
+    if(temp=='('){\
+        _DANGEROUS_GETC_(temp,sp)\
+        if(!_IS_DIGIT_(temp)) --sp;\
+        do _DANGEROUS_GETC_(temp,sp)\
+        while(_IS_DIGIT_(temp));\
+        if(temp==')' && ++sp==X) --sp;\
+    }\
+}
+
+/*  String GetRat
+    Recommended Method:
+    char *temp=str;
+    rat result=sGetRat( & temp,size);
+    int consumed=(int)(temp-str);
+    char NEVER_DO_THIS =*temp;*/
+rat sGetRat(char **AddrOfPtr,unsigned short size){
+    rat q=rZERO;
+    char *sp=*AddrOfPtr;
+    char *X=sp+size; // Already Illegal
+    signed char temp=' ';
+    while(_IS_BLANK_(temp)){
+        _DANGEROUS_GETC_(temp,sp)
+    }//"sp" is always one step further than "temp".
+
+#ifdef _INTRO_TRS_
+    if(size>=_RIB_SIZE_){
+        --sp;
+        q=_s_trs_judge_(&sp);
+        if(q.up!=0 || q.down!=1){
+            *AddrOfPtr=sp;
+            return q;
+        }temp=*sp++;
+    }
+#endif
+
+    signed char pozneg=1; int count=0;
+    switch(temp){
+        case '-': pozneg=-pozneg;
+        case '+':
+            _DANGEROUS_GETC_(temp,sp)
+            if(_IS_DIGIT_(temp)) break;
+            if(temp!='/'&&temp!='.'){
+                *AddrOfPtr=--sp;
+                return _getrat_irrelated_;
+            }
+            if(temp=='/'){
+                q.up=1;
+                goto _after_slash_;
+            }
+        case '.': goto _after_point_;
+        case '/': q.up=1; goto _after_slash_;
+        default :
+            if(!_IS_DIGIT_(temp)){
+                *AddrOfPtr=sp;
+                switch(temp){
+                    case 0 : return _getrat_null_char_;
+                    case EOF:return _getrat_met_eof_;
+                    default: return _getrat_irrelated_;
+                }
+            }
+    }
+
+    char HolyFuck=0;
+    _ADD_DIGIT_(q.up,temp)
+    HolyFuck= (temp==_E_D_O_R_+1);
+    if(_IS_DIGIT_(temp)){
+        _OVERFLOW_STATS_(count,temp)
+        if(temp=='.'){
+            _SKIP_DECIMAL_PART_
+        }if(temp!='/'){
+            *AddrOfPtr=--sp;
+            if(HolyFuck && pozneg<0) return rMIN;
+            _RETURN_OVERFLOW_(pozneg)
+        }
+    }if(temp!='/'&&temp!='.'){
+        _PRECISE_RETURN_
+    }
+
+    if(temp=='/'){_after_slash_:
+        _DANGEROUS_GETC_(temp,sp)
+        switch(temp){
+            case '-': pozneg=-pozneg;
+            case '+': _DANGEROUS_GETC_(temp,sp)
+        }if(_IS_DIGIT_(temp))
+            q.down=0;
+        _ADD_DIGIT_(q.down,temp)
+
+        if(_IS_DIGIT_(temp)){
+            while(_IS_DIGIT_(temp)){
+                --count;
+                _DANGEROUS_GETC_(temp,sp)
+            }
+        }*AddrOfPtr=--sp;
+
+        if(count){
+            if(count>=_D_L_O_R_)
+                _RETURN_OVERFLOW_(pozneg)
+            if(count<=-_D_L_O_R_)
+                return rZERO;
+            if(HolyFuck && pozneg<0 && count==1){
+                q.up=RAT_MIN; return q;
+            }else{
+                ldb power=1,base;
+                if(count<0) count=-count,base=0.1L;
+                else base=10;
+                while(count){
+                    if(count&1) power*=base;
+                    base*=base; count>>=1;
+                }if(pozneg<0) q.up=-q.up;
+                return LdbToRat(q.up/(ldb)q.down*power);
+            }
+        }
+        if(pozneg<0) q.up=-q.up;
+        q.splfd=0; return RatSimp(q);
+    }
+
+    else{ _after_point_:;
+        rat qq=rZERO;
+        urint base;
+        _DANGEROUS_GETC_(temp,sp)
+        _POINT_ADD_DIGIT_(qq.up,qq.down,base,count,temp)
+        qq.splfd=0;
+        q=RatPlus(q,qq);
+        if(_IS_DIGIT_(temp)){
+            _SKIP_DECIMAL_PART_
+            _PRECISE_RETURN_
+        }
+        if(temp!='('){
+            _PRECISE_RETURN_
+        }urint down=qq.down;
+        qq.up=0;
+        _DANGEROUS_GETC_(temp,sp)
+        _POINT_ADD_DIGIT_(qq.up,qq.down,base,count,temp)
+        if(qq.down!=down){
+            if(_IS_DIGIT_(temp)){
+                do _DANGEROUS_GETC_(temp,sp)
+                while(_IS_DIGIT_(temp));
+                q=RatPlus(q,qq);
+            }else{
+                qq.down-=down;
+                q=RatPlus(q,qq);
+            }if(temp==')') ++sp;
+        }else --sp;
+        _PRECISE_RETURN_
+    }
+}
+
+#define _RAT_STRCPY_(Ostr,Istr,SIZE){\
+    while(1){\
+        Ostr[i]=Istr[i];\
+        ++i;\
+        if(i==size && i<SIZE)\
+            return 0;\
+        if(i==SIZE) return SIZE;\
+}}
+#undef _PUT_CHECK_
+#undef _PUTU_PPI_
+#define _PUT_CHECK_(q){\
+    if(!q.down){\
+        switch(q.up){\
+            case -1: _RAT_STRCPY_(str,"+inf",5)\
+            case 1: _RAT_STRCPY_(str,"-inf",5)\
+            default: _RAT_STRCPY_(str,"NaN",4)\
+        }\
+    }\
+}
+#define _PUTU_PPI_(n,str){\
+    ten=1,lv=2,m=n;\
+    while(n/=10) ten*=10,++lv;\
+    while(--lv){\
+        str[i++]=m/ten+'0';\
+        if(i==size) return 0;\
+        m%=ten;ten/=10;\
+}}
+#define _SINGAL_PUT_(ch){\
+    str[i++]=ch;\
+    if(i==size) return 0;\
+}
+#define _RETURN_COMPLETE_{\
+    str[i++]='\0';\
+    return i;\
+}
+
+/*  String PutRat
+    If FAILED to output COMPLETELY ('\0' INCLUDED), return 0;
+    Else return the number of written chars ('\0' INCLUDED);*/
+char sPutRat(rat q,char *str,unsigned short size){
+    if(size==0) return 0;
+    if(q.splfd!=1) q=RatSimp(q);
+    char i=0; // Actions are managed by SIZE, not LEN.
+    _PUT_CHECK_(q)
+    urint q_up;
+    if(q.up<0){
+        _SINGAL_PUT_('-')
+        q_up=-q.up;
+    }else q_up=q.up;
+    urint ten,lv,m;
+    _PUTU_PPI_(q_up,str)
+    if(q.down==1)
+        _RETURN_COMPLETE_
+//  分数线前后。
+    _SINGAL_PUT_('/')
+    _PUTU_PPI_(q.down,str)
+    _RETURN_COMPLETE_
+}
+
+/*  String PutDecimal
+    If FAILED to output COMPLETELY ('\0' INCLUDED), return 0;
+    Else return the number of written chars ('\0' INCLUDED);*/
+unsigned short sPutDecimal(rat q,short n,char *str,unsigned short size){
+    if(size==0) return 0;
+    if(q.splfd!=1) q=RatSimp(q);
+    unsigned short i=0;
+    _PUT_CHECK_(q)
+    rint temp; urint q_up;
+    if(q.up<0){
+        _SINGAL_PUT_('-')
+        q_up=-q.up;
+    }else q_up=q.up;
+    urint ten,lv,m;
+    if(q_up>=q.down){
+        temp=q_up/q.down;
+        _PUTU_PPI_(temp,str)
+        q_up%=q.down;
+    }else _SINGAL_PUT_('0')
+//  与下方的--n呼应，提速并剔除负精度。
+    if(++n==1)
+        _RETURN_COMPLETE_
+    if(n<1) n=7; // 遇负精度，输出六位。
+    _SINGAL_PUT_('.')
+
+//  分子过大会因*10溢出，无法正确作商，故移位近似。
+    if(q.down>_R_A_T_O_){
+        q.up=q_up/=10;
+        q.down/=10;
+        q.splfd=0;
+        q=RatSimp(q);
+    }
+
+    while(--n){
+        q_up*=10;
+        _SINGAL_PUT_(q_up/q.down+'0')
+        q_up%=q.down;
+    }_RETURN_COMPLETE_
+}
+
+/*  If you want a string version of PutRepeat,
+    just fuck yourself!*/
+
+/*  Binarily Serialize a rat and return 1;
+    The size MUST be the same as RAT_SIZE, if not, return 0;*/
+char RatToBin(rat q,unsigned char *s,char size){
+    if(size!=RAT_SIZE) return 0;
+    char i; urint temp=(urint)q.up;
+    for(i=0; i<(RAT_SIZE>>1); ++i){
+        *s++=(unsigned char)(temp & 255);
+        temp>>=8;
+    }temp=q.down;
+    for(i=0; i<(RAT_SIZE>>1); ++i){
+        *s++=(unsigned char)(temp & 255);
+        temp>>=8;
+    }*(--s)|=q.splfd<<7;
+//  s[RAT_SIZE]=={Up,Down,splfd}
+    return 1;
+}
+
+/*  Do the opposite. The size MUST be the same as RAT_SIZE,
+    if not, return rUNCERTAIN;*/
+rat BinToRat(unsigned char *s,char size){
+    if(size!=RAT_SIZE) return rUNCERTAIN;
+    char i; urint up=0, down=0;
+    for(i=RAT_SIZE-1; i>=(RAT_SIZE>>1); --i)
+        down=(down<<8)|s[i];
+    for(; i>=0; --i)
+        up=(up<<8)|s[i];
+    return (rat){(rint)up,\
+        down&RAT_MAX,\
+        down>>((RAT_SIZE<<2)-1)\
+    };
+}
+
 #undef rint
 #undef urint
 #undef ldb
+
 #undef _BETW_RTDT_
 #undef _BETW_RTEP_
 #undef _RETURN_OVERFLOW_
 #undef _BETW_SQRTRM_
 #undef _IS_SAFE_
+
 #undef _PUTU_PPI_
-#undef _PUT_CHECK_1_
-#undef _PUT_CHECK_2_
+#undef _PUT_CHECK_
 #undef _DOB_SIZE_
+#undef _SINGAL_PUT_
+#undef _RETURN_COMPLETE_
+
 #undef _IS_BLANK_
 #undef _IS_DIGIT_
 #undef _ADD_DIGIT_
 #undef _POINT_ADD_DIGIT_
 #undef _OVERFLOW_STATS_
 #undef _SKIP_DECIMAL_PART_
+
+#undef _RAT_STRCPY_
+#undef _DANGEROUS_GETC_
+#undef _PRECISE_RETURN_
