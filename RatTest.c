@@ -4,15 +4,18 @@
 #include "rational.h"
 #define g GetRat()
 #define n putchar('\n')
+//  这程序测试rational中各个功能。
 int main(){
     rat a,b,c; int opt; long double f;
+    char buffer[21]={0}; char ch, *ptr=NULL;
+    unsigned char s[RAT_SIZE];
     while(opt=0, 1){
         puts("测试项目：\n\
-1.加法  2.减法  3.乘法  4.除法\n\
-5.化简  6.负数  7.倒数  8.输入\n\
-9.分数输出 10.n位小数输出 11.准确小数输出\n\
-12.rat转Z   13.rat转flt  14.比较大小\n\
-15.二元运算 16.flt转rat 17.穷举计时");
+1.加法  2.减法  3.乘法  4.除法 5.化简\n\
+6.负数  7.倒数  8.输入 9.分数输出 10.n位小数输出\n\
+11.准确小数输出 12.rat转Z   13.rat转flt\n\
+14.比较大小 15.二元运算 16.flt转rat 17.穷举计时\n\
+18.sGetRat(); 19.sPutRat 20.sPutDecimal");
         scanf("%d",&opt);
         switch(opt){
             case 1: a=g; b=g;
@@ -44,14 +47,15 @@ int main(){
             case 7: a=g; PutRat(RatFlip(a)); break;
             case 8:
             case 9: puts("用英文括号标出循环节（如有）");
-                a=g; printf("\n输出%d个字符。",PutRat(a));
-                n; printf("to float: %.20Lf",(RatToLdb(a)));
+                a=g; RatToBin(a,s,sizeof(s)); a=BinToRat(s,sizeof(s));
+                printf("\n输出%d个字符。\n",PutRat(a));
+                printf("to float: %.20Lf",(RatToLdb(a)));
                 break;
-            case 10: a=g; printf("\n非小数部分%d个字符",PutDecimal(a,g.up));
-                n; printf("by float: %.20Lf",(RatToLdb(a)));
+            case 10: a=g; printf("\n输出%d个字符。\n",PutDecimal(a,g.up));
+                printf("by float: %.20Lf",(RatToLdb(a)));
                 break;
-            case 11: a=g; printf("\n循环节长%d位",PutRepeat(a));
-                n; printf("by float: %.20Lf",(RatToLdb(a)));
+            case 11: a=g; printf("\n循环节长%d位。\n",PutRepeat(a));
+                printf("by float: %.20Lf",(RatToLdb(a)));
                 break;
             case 12: a=g; printf("%lld",RatToRint(a)); break;
             case 13: a=g; printf("%lf",RatToLdb(a)); break;
@@ -71,6 +75,30 @@ int main(){
                                 RatPlus((rat){j,i,0},(rat){l,k,0});
                                 RatTimes((rat){j,i,0},(rat){l,k,0});
                             }break;
+            case 18:
+                for(int i=0; i<21; ++i){
+                    buffer[i]=0;
+                }for(int i=0; i<21; ++i){
+                    ch=getchar();
+                    if(ch>0)
+                        buffer[i]=ch;
+                    else break;
+                }ptr=buffer;
+                PutRat(sGetRat(&ptr, 21));
+                printf("\n读取了%d个字符。",(int)(ptr-buffer-1));
+                ptr=NULL; break;
+            case 19:
+                a=g; opt=sPutRat(a,buffer,21);
+                if(opt) puts(buffer);
+                printf("输出%d个字符。\n",opt-1);
+                printf("to float: %.20Lf",(RatToLdb(a)));
+                break;
+            case 20:
+                a=g; b=g; opt=sPutDecimal(a,b.up,buffer,21);
+                if(opt) puts(buffer);
+                printf("输出%d个字符。\n",opt);
+                printf("by float: %.20Lf",(RatToLdb(a)));
+                break;
             default: goto end;
         }   n; fputs("输入流残余：",stdout); while(putchar(getchar())!='\n');
     }end:;
